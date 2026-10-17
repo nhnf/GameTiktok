@@ -98,5 +98,18 @@ export function sessionRouter(manager: GameSessionManager, adapter: LiveAdapter)
     }),
   );
 
+  router.post(
+    "/gift-goal",
+    asyncRoute(async (req, res) => {
+      const targetCoins = numberParam((req.body as { targetCoins?: unknown })?.targetCoins, 0, 1, 100000);
+      if (targetCoins <= 0) {
+        res.status(400).json({ error: "Target koin tidak valid (minimal 1 koin)." });
+        return;
+      }
+      manager.setGiftGoalCoins(targetCoins);
+      res.json(manager.getHostState());
+    }),
+  );
+
   return router;
 }

@@ -60,6 +60,7 @@ export interface SessionSettings {
   matematika?: Partial<MathConfig>;
   mathBattle?: Partial<MathBattleConfig>;
   liveTimer?: LiveTimerSettings;
+  giftGoalCoins?: number;
 }
 
 export interface SessionProgress {

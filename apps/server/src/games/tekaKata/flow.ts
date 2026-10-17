@@ -24,11 +24,16 @@ export abstract class TekaKataFlow {
   protected categories = new Map<string, { id: string; name: string }>();
   protected puzzlesCompleted = 0;
   protected wordsFound = 0;
+  protected nextIsBoss = false;
 
   constructor(
     protected readonly broadcaster: Broadcaster,
     protected readonly ctx: GameAdapterContext,
   ) {}
+
+  setNextBoss(force: boolean = true): void {
+    this.nextIsBoss = force;
+  }
 
   getConfig(): TekaKataConfig {
     return this.config;
@@ -43,7 +48,9 @@ export abstract class TekaKataFlow {
   async generatePuzzle(): Promise<TekaKataPuzzleHostState> {
     this.clearAutoAdvance();
     await this.refreshCaches();
-    const built = buildTekaKataPuzzle(this.config, this.wordsCache, this.usedWordIds, this.categories);
+    const effectiveConfig = this.nextIsBoss ? { ...this.config, difficulty: "boss" as const } : this.config;
+    this.nextIsBoss = false;
+    const built = buildTekaKataPuzzle(effectiveConfig, this.wordsCache, this.usedWordIds, this.categories);
     const previous = this.puzzle;
     if (previous?.status === "ACTIVE") void tekaKataStore.setStatus(previous.dbId, "SKIPPED");
 

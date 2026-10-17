@@ -41,7 +41,8 @@ export class GameSessionManager extends SessionCore {
     this.totalValidGuesses = 0;
     this.totalGifts = 0;
     this.lastSessionSummary = null;
-    this.giftGoal = { currentCoins: 0, targetCoins: 100, tier: 1, lastGifter: null };
+    const baseCoins = this.settings.giftGoalCoins ?? 100;
+    this.giftGoal = { currentCoins: 0, targetCoins: baseCoins, tier: 1, lastGifter: null };
 
     const row = await prisma.liveSession.create({
       data: { status: "ACTIVE", activeGame: this.activeGame, settingsJson: JSON.stringify(this.settings) },
@@ -256,18 +257,21 @@ export class GameSessionManager extends SessionCore {
 
         if (this.giftGoal.currentCoins >= this.giftGoal.targetCoins) {
           const reachedGoal = { ...this.giftGoal };
+          const baseCoins = this.settings.giftGoalCoins ?? 100;
           this.giftGoal.tier += 1;
           this.giftGoal.currentCoins = Math.max(0, this.giftGoal.currentCoins - this.giftGoal.targetCoins);
-          this.giftGoal.targetCoins = 100 * this.giftGoal.tier;
+          this.giftGoal.targetCoins = baseCoins * this.giftGoal.tier;
 
           this.games.MATEMATIKA.setNextBoss(true);
+          this.games.TEBAK_KATA.setNextBoss(true);
+          this.games.TEKA_KATA.setNextBoss(true);
 
           this.broadcaster.publish({
             type: "GIFT_GOAL_ACHIEVED",
             payload: {
               goal: reachedGoal,
               reward: "BOSS_ROUND",
-              message: "TARGET TERCAPAI! SOAL BERIKUTNYA: BOSS ROUND (3X POIN)",
+              message: "TARGET TERCAPAI! SOAL BERIKUTNYA: BOSS ROUND (POIN BERLIPAT)",
             },
           });
         } else {

@@ -66,3 +66,7 @@ export const DEFAULT_LIVE_TIMER = {
 
 /** Seconds the session stays in overtime (waiting for a gift) once the countdown hits zero. */
 export const LIVE_TIMER_GRACE_SECONDS = 120;
+
+/** Default coin target to trigger Boss Round (Gift Goal). */
+export const DEFAULT_GIFT_GOAL_COINS = 100;
+

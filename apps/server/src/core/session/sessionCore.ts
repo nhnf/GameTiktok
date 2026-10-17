@@ -208,9 +208,24 @@ export abstract class SessionCore {
     return this.settings;
   }
 
+  setGiftGoalCoins(coins: number): void {
+    const valid = Math.max(1, Math.round(coins));
+    this.settings.giftGoalCoins = valid;
+    this.giftGoal.targetCoins = valid * this.giftGoal.tier;
+    void settingsStore.save(this.settings);
+    this.broadcaster.publish({
+      type: "GIFT_GOAL_UPDATED",
+      payload: { ...this.giftGoal },
+    });
+    this.broadcastFullState();
+  }
+
   /** Pushes settings into the game modules that read them live. */
   protected applySettings(settings: SessionSettings): void {
     this.settings = settings;
+    if (settings.giftGoalCoins && settings.giftGoalCoins > 0) {
+      this.giftGoal.targetCoins = settings.giftGoalCoins * this.giftGoal.tier;
+    }
     this.games.TEBAK_KATA.updateSettings(settings);
     if (settings.tekaKata) this.games.TEKA_KATA.updateConfig(settings.tekaKata);
     if (settings.matematika) this.games.MATEMATIKA.updateConfig(settings.matematika);

@@ -51,6 +51,7 @@ const settingsInput = z.object({
       secondsPerCoin: z.number().int().min(0).max(3600).optional(),
     })
     .optional(),
+  giftGoalCoins: z.number().int().min(1).max(100000).optional(),
 });
 
 /** Admin → Pengaturan (PRD 13.2: scoring "dapat diubah melalui konfigurasi admin"). */

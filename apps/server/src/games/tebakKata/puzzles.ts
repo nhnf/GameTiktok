@@ -65,12 +65,18 @@ export abstract class TebakKataPuzzles {
 
   protected wordsSolvedSinceLastBoss = 0;
 
+  protected nextIsBoss = false;
+
   protected autoAdvanceTimer: NodeJS.Timeout | null = null;
 
   constructor(
     protected readonly broadcaster: Broadcaster,
     protected readonly ctx: GameAdapterContext,
   ) {}
+
+  setNextBoss(force: boolean = true): void {
+    this.nextIsBoss = force;
+  }
 
   updateSettings(partial: Partial<SessionSettings>): void {
     this.settings = { ...this.settings, ...partial };
@@ -90,7 +96,8 @@ export abstract class TebakKataPuzzles {
     if (!sessionId) return;
     this.clearAutoAdvance();
 
-    const isBoss = shouldTriggerBoss(this.wordsSolvedSinceLastBoss, this.settings.bossEveryNWords);
+    const isBoss = this.nextIsBoss || shouldTriggerBoss(this.wordsSolvedSinceLastBoss, this.settings.bossEveryNWords);
+    this.nextIsBoss = false;
     const wanted: Difficulty = isBoss
       ? "boss"
       : TEBAK_KATA_DIFFICULTY_ROTATION[Math.floor(Math.random() * TEBAK_KATA_DIFFICULTY_ROTATION.length)];

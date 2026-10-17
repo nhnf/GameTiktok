@@ -85,4 +85,24 @@ describe("GameSessionManager", () => {
 
     await manager.endSession();
   });
+
+  it("triggers Boss round in Tebak Kata when gift goal is reached", async () => {
+    const manager = new GameSessionManager(new Broadcaster());
+    await manager.startSession({ activeGame: "TEBAK_KATA", giftGoalCoins: 40 });
+
+    expect(manager.getHostState().giftGoal?.targetCoins).toBe(40);
+
+    // Send 40 coins gift
+    await manager.handleGift({ platformUserId: "p_gift", username: "gifter", giftId: "5655", diamondCount: 40, count: 1 });
+    expect(manager.getHostState().giftGoal?.tier).toBe(2);
+
+    // Next puzzle generated must be Boss!
+    await manager.getTebakKataAdapter().newPuzzle();
+    const puzzle = manager.getHostState().puzzle;
+    expect(puzzle?.isBoss).toBe(true);
+    expect(puzzle?.difficulty).toBe("boss");
+
+    await manager.endSession();
+  });
 });
+

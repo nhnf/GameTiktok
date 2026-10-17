@@ -107,6 +107,24 @@ export function SettingsManager() {
         </label>
       </Card>
 
+      <Card>
+        <CardTitle>Gift Goal (Boss Round)</CardTitle>
+        <label className="mb-2 block">
+          <span className="nb-label mb-1.5 block">Target Koin Gift Default (Per Tier)</span>
+          <input
+            type="number"
+            min={1}
+            max={50000}
+            value={settings.giftGoalCoins ?? 100}
+            onChange={(e) => setSettings({ ...settings, giftGoalCoins: Math.max(1, Number(e.target.value) || 1) })}
+            className="nb-input font-mono"
+          />
+        </label>
+        <p className="text-xs font-medium text-muted">
+          Saat total koin gift penonton mencapai target ini, ronde/puzzle berikutnya otomatis menjadi Boss Round (poin berlipat ganda).
+        </p>
+      </Card>
+
       <LiveTimerCard settings={settings} onChange={setSettings} />
 
       <Button size="lg" onClick={() => void save()} disabled={saving}>

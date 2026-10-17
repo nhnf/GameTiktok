@@ -16,10 +16,17 @@ export function SessionLiveCard({ token, hostState }: { token: string; hostState
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [confirmEnd, setConfirmEnd] = useState(false);
+  const [editGoalCoins, setEditGoalCoins] = useState(hostState.giftGoal?.targetCoins ?? 100);
   const timer = hostState.timer;
   const { remaining, grace } = useLiveCountdown(timer);
   const paused = hostState.status === "PAUSED";
   const overtime = Boolean(timer?.isOvertimeGrace);
+
+  useEffect(() => {
+    if (hostState.giftGoal?.targetCoins) {
+      setEditGoalCoins(hostState.giftGoal.targetCoins);
+    }
+  }, [hostState.giftGoal?.targetCoins]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
     setBusy(label);
@@ -70,6 +77,77 @@ export function SessionLiveCard({ token, hostState }: { token: string; hostState
           <div className="text-right text-[11px] font-bold">
             <div className="text-muted">{coinRuleLabel(timer.secondsPerCoin)}</div>
             {timer.secondsAddedByGifts > 0 && <div className="text-ink">+{Math.round(timer.secondsAddedByGifts / 60)} menit dari gift</div>}
+          </div>
+        </div>
+      )}
+
+      {/* Gift Goal Live Progress & Control */}
+      {hostState.giftGoal && (
+        <div className="mb-3 rounded-nb-sm border-2 border-ink bg-white p-2.5">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-black uppercase text-ink">🎯 Gift Goal (Boss Round)</span>
+              <span className="rounded-full border border-ink bg-purple px-1.5 py-0.2 text-[9px] font-black text-white">
+                Tier #{hostState.giftGoal.tier}
+              </span>
+            </div>
+            <div className="font-mono text-xs font-black text-ink">
+              {hostState.giftGoal.currentCoins} / {hostState.giftGoal.targetCoins} Koin
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="h-3 w-full overflow-hidden rounded-full border-2 border-ink bg-paper-deep">
+            <div
+              className="h-full bg-yellow transition-all duration-300"
+              style={{
+                width: `${Math.min(100, Math.round((hostState.giftGoal.currentCoins / Math.max(1, hostState.giftGoal.targetCoins)) * 100))}%`,
+              }}
+            />
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-muted">Target:</span>
+              <input
+                type="number"
+                min={1}
+                max={50000}
+                value={editGoalCoins}
+                onChange={(e) => setEditGoalCoins(Math.max(1, Number(e.target.value) || 1))}
+                className="nb-input h-7 w-16 px-1 py-0.5 text-center font-mono text-xs font-bold"
+                aria-label="Target koin gift goal live"
+              />
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy !== null || editGoalCoins === hostState.giftGoal.targetCoins}
+                onClick={() => void run("setGoal", () => api.setGiftGoalTarget(token, editGoalCoins))}
+                className="h-7 px-2 text-xs"
+              >
+                Set
+              </Button>
+            </div>
+            <div className="flex items-center gap-1">
+              {[50, 100, 200, 500].map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    setEditGoalCoins(c);
+                    void run("setGoal", () => api.setGiftGoalTarget(token, c));
+                  }}
+                  className={`rounded border border-ink px-1.5 py-0.5 text-[10px] font-bold transition-all ${
+                    hostState.giftGoal?.targetCoins === c
+                      ? "bg-yellow text-ink font-black scale-105"
+                      : "bg-paper text-ink hover:bg-paper-deep"
+                  }`}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

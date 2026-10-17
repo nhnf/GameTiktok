@@ -1,6 +1,7 @@
 import {
   DEFAULT_ANTI_REPEAT_WINDOW,
   DEFAULT_BOSS_EVERY_N_WORDS,
+  DEFAULT_GIFT_GOAL_COINS,
   DEFAULT_LIVE_TIMER,
   DEFAULT_MATH_CONFIG,
   DEFAULT_SCORING,
@@ -19,6 +20,7 @@ export function defaultSessionSettings(): SessionSettings {
     tekaKata: { ...DEFAULT_TEKA_KATA_CONFIG },
     matematika: { ...DEFAULT_MATH_CONFIG },
     liveTimer: { ...DEFAULT_LIVE_TIMER },
+    giftGoalCoins: DEFAULT_GIFT_GOAL_COINS,
   };
 }
 

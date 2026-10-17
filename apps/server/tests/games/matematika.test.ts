@@ -98,4 +98,33 @@ describe("Matematika LIVE", () => {
 
     await manager.endSession();
   });
+
+  it("supports configurable gift goal coins at start and live update", async () => {
+    const manager = new GameSessionManager(new Broadcaster());
+    await manager.startSession({
+      activeGame: "MATEMATIKA",
+      giftGoalCoins: 50,
+      matematika: { durationSeconds: 30, autoNext: false },
+    });
+
+    expect(manager.getHostState().giftGoal?.targetCoins).toBe(50);
+
+    // Live update to 75 coins
+    manager.setGiftGoalCoins(75);
+    expect(manager.getHostState().giftGoal?.targetCoins).toBe(75);
+
+    // Send 75 coins gift to achieve goal
+    await manager.handleGift({ platformUserId: "gifter", username: "sultan", giftId: "5657", diamondCount: 75, count: 1 });
+    expect(manager.getHostState().giftGoal?.tier).toBe(2);
+    expect(manager.getHostState().giftGoal?.targetCoins).toBe(150); // 75 * 2
+
+    // Next question should be Boss Round
+    await manager.getMatematikaAdapter().generateQuestion();
+    await manager.getMatematikaAdapter().startQuestion();
+    const q = manager.getHostState().mathQuestion!;
+    expect(q.isBoss).toBe(true);
+
+    await manager.endSession();
+  });
 });
+
