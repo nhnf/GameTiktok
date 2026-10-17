@@ -1,0 +1,531 @@
+// Tebak Kata Live, Teka Kata Live, & Matematika LIVE — persistence schema.
+// Mirrors PRD_Tebak_Kata_Live_TikTok.md, PRD_TEKA_KATA_LIVE_UPDATE 1.md, and PRD_MATEMATIKA_LIVE.md.
+//
+// Default provider is SQLite for zero-dependency local development.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// SHARED & TEBAK KATA TABLES
+// ==========================================
+
+model Category {
+  id    String @id @default(cuid())
+  name  String @unique
+  emoji String
+
+  words Word[]
+
+  @@map("categories")
+}
+
+model Word {
+  id          String   @id @default(cuid())
+  word        String // normalized uppercase
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  difficulty  String // easy | medium | hard | boss
+  isActive    Boolean  @default(true)
+  usageCount  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  puzzles Puzzle[]
+
+  @@unique([word, categoryId])
+  @@index([difficulty, isActive])
+  @@map("words")
+}
+
+model LiveSession {
+  id           String    @id @default(cuid())
+  status       String // CREATED | ACTIVE | PAUSED | ENDED
+  activeGame   String    @default("TEBAK_KATA") // TEBAK_KATA | TEKA_KATA | MATEMATIKA | AUTO_BATTLE | MATEMATIKA_BATTLE
+  settingsJson String // JSON-encoded SessionSettings
+  startedAt    DateTime  @default(now())
+  endedAt      DateTime?
+
+  players         SessionPlayer[]
+  puzzles         Puzzle[]
+  tekaKataPuzzles TekaKataPuzzle[]
+  mathQuestions   MathQuestion[]
+  events          GameEvent[]
+
+  @@map("live_sessions")
+}
+
+model SessionPlayer {
+  id             String      @id @default(cuid())
+  sessionId      String
+  session        LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  platformUserId String
+  username       String
+  displayName    String?
+  avatarUrl      String?
+  points         Int         @default(0)
+  wins           Int         @default(0)
+  guesses        Int         @default(0)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  wonPuzzles         Puzzle[]
+  guessLog           PuzzleGuess[]
+  foundTekaKataWords TekaKataPuzzleWord[]
+  tekaKataFoundLog   TekaKataFoundWord[]
+  mathAnswers        MathAnswer[]
+
+  @@unique([sessionId, platformUserId])
+  @@index([sessionId, points])
+  @@map("session_players")
+}
+
+model Puzzle {
+  id             String         @id @default(cuid())
+  sessionId      String
+  session        LiveSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  wordId         String
+  word           Word           @relation(fields: [wordId], references: [id], onDelete: Cascade)
+  difficulty     String
+  isBoss         Boolean        @default(false)
+  displayState   String // e.g. "KEL__"
+  status         String // ACTIVE | SOLVED | SKIPPED
+  winnerPlayerId String?
+  winner         SessionPlayer? @relation(fields: [winnerPlayerId], references: [id], onDelete: SetNull)
+  startedAt      DateTime       @default(now())
+  solvedAt       DateTime?
+
+  guesses PuzzleGuess[]
+
+  @@index([sessionId, status])
+  @@map("puzzles")
+}
+
+model PuzzleGuess {
+  id              String        @id @default(cuid())
+  puzzleId        String
+  puzzle          Puzzle        @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+  playerId        String
+  player          SessionPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  rawComment      String
+  normalizedGuess String
+  matchedLength   Int
+  isFullMatch     Boolean
+  isWinner        Boolean
+  createdAt       DateTime      @default(now())
+
+  @@index([puzzleId])
+  @@map("puzzle_guesses")
+}
+
+model GiftConfig {
+  id       String  @id @default(cuid())
+  giftId   String  @unique
+  giftName String
+  effect   String // REVEAL_NEXT_LETTER
+  enabled  Boolean @default(true)
+
+  @@map("gift_configs")
+}
+
+model GameEvent {
+  id          String      @id @default(cuid())
+  sessionId   String
+  session     LiveSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type        String
+  payloadJson String // JSON-encoded event payload
+  createdAt   DateTime    @default(now())
+
+  @@index([sessionId, type])
+  @@map("game_events")
+}
+
+// ==========================================
+// TEKA KATA MODULE TABLES (PRD Section 46-53)
+// ==========================================
+
+model TekaKataCategory {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  words   TekaKataWord[]
+  puzzles TekaKataPuzzle[]
+
+  @@map("teka_kata_categories")
+}
+
+model TekaKataWord {
+  id             String           @id @default(cuid())
+  word           String // Uppercase word
+  normalizedWord String // Uppercase, trimmed, clean
+  categoryId     String
+  category       TekaKataCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  difficulty     String // easy | medium | hard | boss
+  minimumLength  Int              @default(3)
+  maximumLength  Int              @default(12)
+  isAllowed      Boolean          @default(true)
+  isActive       Boolean          @default(true)
+  usageCount     Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  puzzleWords TekaKataPuzzleWord[]
+
+  @@unique([word, categoryId])
+  @@index([difficulty, isActive])
+  @@map("teka_kata_words")
+}
+
+model TekaKataPuzzle {
+  id          String            @id @default(cuid())
+  sessionId   String
+  session     LiveSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  difficulty  String // easy | medium | hard | boss
+  categoryId  String?
+  category    TekaKataCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  lettersJson String // JSON-encoded string[]
+  gridRows    Int
+  gridColumns Int
+  status      String // DRAFT | READY | ACTIVE | COMPLETING | COMPLETED | SKIPPED
+  totalWords  Int
+  foundWords  Int               @default(0)
+  isBoss      Boolean           @default(false)
+  createdAt   DateTime          @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  words         TekaKataPuzzleWord[]
+  foundWordsLog TekaKataFoundWord[]
+
+  @@index([sessionId, status])
+  @@map("teka_kata_puzzles")
+}
+
+model TekaKataPuzzleWord {
+  id              String         @id @default(cuid())
+  puzzleId        String
+  puzzle          TekaKataPuzzle @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+  wordId          String?
+  wordRef         TekaKataWord?  @relation(fields: [wordId], references: [id], onDelete: SetNull)
+  word            String // normalized uppercase word
+  row             Int
+  column          Int
+  direction       String // horizontal | vertical
+  points          Int
+  isFound         Boolean        @default(false)
+  isRevealed      Boolean        @default(false)
+  foundByPlayerId String?
+  foundBy         SessionPlayer? @relation(fields: [foundByPlayerId], references: [id], onDelete: SetNull)
+  foundAt         DateTime?
+
+  foundLog TekaKataFoundWord[]
+
+  @@index([puzzleId, isFound])
+  @@map("teka_kata_puzzle_words")
+}
+
+model TekaKataFoundWord {
+  id           String             @id @default(cuid())
+  puzzleId     String
+  puzzle       TekaKataPuzzle     @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+  puzzleWordId String
+  puzzleWord   TekaKataPuzzleWord @relation(fields: [puzzleWordId], references: [id], onDelete: Cascade)
+  playerId     String
+  player       SessionPlayer      @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  rawComment   String?
+  points       Int
+  createdAt    DateTime           @default(now())
+
+  @@index([puzzleId])
+  @@map("teka_kata_found_words")
+}
+
+// ==========================================
+// MATEMATIKA LIVE TABLES (PRD Section 27-28)
+// ==========================================
+
+model MathQuestion {
+  id              String        @id @default(cuid())
+  sessionId       String
+  session         LiveSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  expression      String // e.g. "27 + 14 + 38"
+  number1         Int
+  number2         Int
+  number3         Int
+  operator1       String // "+" | "-"
+  operator2       String // "+" | "-"
+  answer          Int
+  minNumber       Int           @default(1)
+  maxNumber       Int           @default(99)
+  allowNegative   Boolean       @default(false)
+  durationSeconds Int           @default(10)
+  status          String // DRAFT | READY | ACTIVE | TIME_UP | COMPLETED | SKIPPED
+  startedAt       DateTime?
+  endsAt          DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime      @default(now())
+
+  answers MathAnswer[]
+
+  @@index([sessionId, status])
+  @@map("math_questions")
+}
+
+model MathAnswer {
+  id              String        @id @default(cuid())
+  questionId      String
+  question        MathQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  playerId        String
+  player          SessionPlayer @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  submittedAnswer Int
+  rawComment      String?
+  isCorrect       Boolean
+  rank            Int           @default(0)
+  points          Int           @default(0)
+  createdAt       DateTime      @default(now())
+
+  @@index([questionId, isCorrect])
+  @@map("math_answers")
+}
+
+// ==========================================
+// PLATFORM: PERSISTED SETTINGS
+// ==========================================
+
+// Key/value JSON store for platform settings (e.g. the session settings the
+// host edits in Admin → Pengaturan) so they survive a server restart.
+model AppSetting {
+  id        String   @id
+  valueJson String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// ==========================================
+// PLATFORM: GIFT DISCOVERY
+// ==========================================
+
+// Every gift that actually arrives from TikTok (any game). Lets the host see
+// the real numeric gift ids/names their LIVE receives and map them.
+model SeenGift {
+  id           String   @id @default(cuid())
+  giftId       String   @unique
+  giftName     String
+  diamondCount Int      @default(0)
+  imageUrl     String?
+  timesSeen    Int      @default(0)
+  lastSender   String?
+  firstSeenAt  DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+
+  @@map("seen_gifts")
+}
+
+// ==========================================
+// AUTO BATTLE ARENA (Auto Battle Arena/PRD_TikTok_LIVE_Auto_Battle_Arena.md)
+// ==========================================
+
+// PRD §13 / §34 — Gift -> Team -> Unit -> Quantity.
+model BattleGiftMapping {
+  id           String   @id @default(cuid())
+  giftId       String?  @unique // TikTok numeric id; null = match by name
+  giftName     String
+  team         String // A | B
+  unitType     String // TANK | ARCHER | BERSERKER | HEAVY | MAGE | SPEARMAN | SUPPORT | SIEGE
+  quantity     Int      @default(1)
+  enabled      Boolean  @default(true)
+  diamondCount Int?
+  imageUrl     String? // TikTok gift icon (from the gift catalog / a received gift)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("battle_gift_mappings")
+}
+
+// Single-row JSON blob holding BattleConfig (teams, match & unit settings).
+model BattleSetting {
+  id         String   @id @default("default")
+  configJson String
+  updatedAt  DateTime @updatedAt
+
+  @@map("battle_settings")
+}
+
+// PRD §30 Match + §36 Match History.
+model BattleMatch {
+  id            String    @id // engine match id
+  sessionId     String?
+  matchNumber   Int
+  status        String // BATTLE | ENDED
+  winner        String? // A | B
+  reason        String?
+  teamAName     String
+  teamBName     String
+  teamABaseHp   Int?
+  teamBBaseHp   Int?
+  duration      Int?
+  totalGifts    Int       @default(0)
+  teamAGifts    Int       @default(0)
+  teamBGifts    Int       @default(0)
+  unitsSpawned  Int       @default(0)
+  resultJson    String?
+  startedAt     DateTime  @default(now())
+  endedAt       DateTime?
+
+  giftEvents    BattleGiftEvent[]
+  contributions BattleContribution[]
+
+  @@index([startedAt])
+  @@map("battle_matches")
+}
+
+// PRD §30 GiftEvent — one row per accepted gift event.
+model BattleGiftEvent {
+  id         String      @id @default(cuid())
+  matchId    String
+  match      BattleMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  eventId    String      @unique
+  viewerId   String
+  viewerName String
+  giftId     String
+  giftName   String
+  team       String
+  unitType   String
+  quantity   Int
+  giftCount  Int         @default(1)
+  createdAt  DateTime    @default(now())
+
+  @@index([matchId])
+  @@map("battle_gift_events")
+}
+
+// PRD §30 ViewerContribution — snapshot written when a match ends.
+model BattleContribution {
+  id             String      @id @default(cuid())
+  matchId        String
+  match          BattleMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  viewerId       String
+  viewerName     String
+  totalGifts     Int
+  unitsSpawned   Int
+  damage         Int
+  buildingDamage Int
+  healing        Int
+  score          Int
+
+  @@unique([matchId, viewerId])
+  @@map("battle_contributions")
+}
+
+// ==========================================
+// MATEMATIKA TARIK TAMBANG LIVE (NEW_MODULE_MATEMATIKA_BATTLE.md)
+// ==========================================
+
+model MathBattleGiftMapping {
+  id           String   @id @default(cuid())
+  giftId       String?  @unique
+  giftName     String
+  team         String // BLUE | RED | NEUTRAL
+  tier         String // SMALL | MEDIUM | LARGE | NEUTRAL
+  power        Int      @default(5)
+  enabled      Boolean  @default(true)
+  diamondCount Int?
+  imageUrl     String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("math_battle_gift_mappings")
+}
+
+model MathBattleSetting {
+  id         String   @id @default("default")
+  configJson String
+  updatedAt  DateTime @updatedAt
+
+  @@map("math_battle_settings")
+}
+
+model MathBattleMatch {
+  id                 String    @id
+  sessionId          String?
+  matchNumber        Int
+  status             String // ACTIVE | ENDED
+  winner             String? // BLUE | RED | DRAW
+  winningReason      String? // WIN_LINE | FULL_ROUNDS | HOST
+  totalRounds        Int
+  completedRounds    Int
+  finalRopePosition  Int
+  blueTotalPower     Int       @default(0)
+  redTotalPower      Int       @default(0)
+  blueAnswerPower    Int       @default(0)
+  redAnswerPower     Int       @default(0)
+  blueGiftPower      Int       @default(0)
+  redGiftPower       Int       @default(0)
+  blueRoundsWon      Int       @default(0)
+  redRoundsWon       Int       @default(0)
+  resultJson         String?
+  startedAt          DateTime  @default(now())
+  endedAt            DateTime?
+
+  rounds             MathBattleRoundRecord[]
+  giftEvents         MathBattleGiftEventRecord[]
+
+  @@index([startedAt])
+  @@map("math_battle_matches")
+}
+
+model MathBattleRoundRecord {
+  id                 String          @id @default(cuid())
+  matchId            String
+  match              MathBattleMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  roundNumber        Int
+  blueQuestion       String
+  blueAnswer         Int
+  redQuestion        String
+  redAnswer          Int
+  blueAnswerPower    Int
+  redAnswerPower     Int
+  blueGiftPower      Int
+  redGiftPower       Int
+  blueTotalPower     Int
+  redTotalPower      Int
+  ropePositionBefore Int
+  ropePositionAfter  Int
+  roundWinner        String // BLUE | RED | DRAW
+  createdAt          DateTime        @default(now())
+
+  @@index([matchId, roundNumber])
+  @@map("math_battle_rounds")
+}
+
+model MathBattleGiftEventRecord {
+  id         String          @id @default(cuid())
+  matchId    String
+  match      MathBattleMatch @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  roundNumber Int
+  eventId    String          @unique
+  viewerId   String
+  viewerName String
+  giftId     String
+  giftName   String
+  team       String // BLUE | RED | NEUTRAL
+  tier       String // SMALL | MEDIUM | LARGE | NEUTRAL
+  power      Int
+  giftCount  Int             @default(1)
+  createdAt  DateTime        @default(now())
+
+  @@index([matchId])
+  @@map("math_battle_gift_events")
+}
+

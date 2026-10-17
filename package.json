@@ -1,0 +1,21 @@
+{
+  "name": "tebak-kata-live",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Tebak Kata Live — TikTok LIVE interactive word-guessing game",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w packages/shared",
+    "dev:server": "npm run dev -w apps/server",
+    "dev:web": "npm run dev -w apps/web",
+    "test:shared": "npm run test -w packages/shared",
+    "db:migrate": "npm run db:migrate -w apps/server",
+    "db:seed": "npm run db:seed -w apps/server"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3"
+  }
+}

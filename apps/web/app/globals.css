@@ -1,0 +1,80 @@
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  background: #fff4e0;
+  color: #111111;
+  font-family: var(--font-ui), "Space Grotesk", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Design System v2.0 (Neo-Brutalism) — PLAN_Redesign_Neo_Brutalism.md §4.7 */
+@layer components {
+  .nb-input {
+    @apply w-full rounded-nb-sm border-3 border-ink bg-white px-3 py-2 text-sm font-medium text-ink outline-none transition-shadow duration-100 placeholder:text-muted focus:shadow-nb-sm;
+  }
+
+  .nb-label {
+    @apply text-xs font-bold uppercase tracking-wider text-ink;
+  }
+
+  .bg-dots {
+    background-color: #fff4e0;
+    background-image: radial-gradient(rgba(17, 17, 17, 0.09) 2px, transparent 2px);
+    background-size: 28px 28px;
+  }
+
+  .bg-dots-yellow {
+    background-color: #ffd60a;
+    background-image: radial-gradient(rgba(17, 17, 17, 0.1) 2px, transparent 2px);
+    background-size: 28px 28px;
+  }
+
+  .bg-dots-dark {
+    background-color: #111111;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.08) 2px, transparent 2px);
+    background-size: 28px 28px;
+  }
+
+  .bg-hazard {
+    background-image: repeating-linear-gradient(45deg, #ffd60a 0 24px, #111111 24px 48px);
+  }
+
+  .bg-stripes {
+    background-image: repeating-linear-gradient(-45deg, rgba(17, 17, 17, 0.12) 0 14px, transparent 14px 28px);
+  }
+}
+
+/* Confetti pieces fall the full 1920px overlay height; --drift/--spin set per piece. */
+@keyframes confetti-fall {
+  0% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  100% {
+    transform: translate3d(var(--drift, 0px), 2100px, 0) rotate(var(--spin, 540deg));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}
