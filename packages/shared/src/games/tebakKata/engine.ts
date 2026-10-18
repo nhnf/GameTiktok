@@ -15,8 +15,9 @@ export function normalizeGuess(raw: string): string {
   if (typeof raw !== "string") return "";
   return raw
     .normalize("NFKC")
+    .replace(/[−–]/g, "-")
     .toUpperCase()
-    .replace(/[^\p{L}\p{N}\s]/gu, "") // strip punctuation (keep letters/digits/spaces)
+    .replace(/[^\p{L}\p{N}\s\-]/gu, "") // strip punctuation (keep letters/digits/spaces/hyphen)
     .replace(/\s+/g, "")
     .trim();
 }

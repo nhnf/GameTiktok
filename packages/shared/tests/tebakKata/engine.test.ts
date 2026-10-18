@@ -19,6 +19,9 @@ describe("normalizeGuess", () => {
     expect(normalizeGuess("KELAS!!!")).toBe("KELAS");
     expect(normalizeGuess(" kelas ")).toBe("KELAS");
     expect(normalizeGuess("Ke las")).toBe("KELAS");
+    expect(normalizeGuess("-7")).toBe("-7");
+    expect(normalizeGuess("−7")).toBe("-7");
+    expect(normalizeGuess("kupu-kupu")).toBe("KUPU-KUPU");
   });
 });
 

@@ -50,8 +50,18 @@ export function GuessTicker({
   );
 }
 
+function formatTickerGuess(message: ChatMessageView): string {
+  const raw = message.rawComment || "";
+  const trimmed = raw.trim().replace(/^[−–]\s*/, "-").replace(/^-\s+/, "-");
+  // If it's a numeric answer (like -7 or 42), keep the sign and digits intact
+  if (/^-?\d+$/.test(trimmed)) {
+    return trimmed;
+  }
+  return normalizeGuess(raw);
+}
+
 function GuessRow({ message, animate }: { message: ChatMessageView; animate: boolean }) {
-  const guess = normalizeGuess(message.rawComment);
+  const guess = formatTickerGuess(message);
   const shown = guess.length > MAX_CHARS ? `${guess.slice(0, MAX_CHARS)}…` : guess;
   // Only Tebak Kata reports a matched prefix; other games carry a verdict instead.
   const matched = message.status ? 0 : Math.min(message.matchedLength, guess.length, MAX_CHARS);

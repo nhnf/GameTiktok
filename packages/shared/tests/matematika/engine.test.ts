@@ -16,6 +16,9 @@ describe("Math Engine - normalizeMathAnswer", () => {
     expect(normalizeMathAnswer("  42  ")).toBe(42);
     expect(normalizeMathAnswer("0")).toBe(0);
     expect(normalizeMathAnswer("-15")).toBe(-15);
+    expect(normalizeMathAnswer("−7")).toBe(-7);
+    expect(normalizeMathAnswer("- 7")).toBe(-7);
+    expect(normalizeMathAnswer("–15")).toBe(-15);
   });
 
   it("returns null for non-numeric or mixed text", () => {

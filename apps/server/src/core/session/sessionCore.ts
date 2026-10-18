@@ -220,11 +220,26 @@ export abstract class SessionCore {
     this.broadcastFullState();
   }
 
+  setLiveTimerSecondsPerCoin(seconds: number): void {
+    const valid = Math.max(0, Math.round(seconds));
+    if (!this.settings.liveTimer) {
+      this.settings.liveTimer = { enabled: true, initialMinutes: 30, secondsPerCoin: valid };
+    } else {
+      this.settings.liveTimer.secondsPerCoin = valid;
+    }
+    this.timer.setSecondsPerCoin(valid);
+    void settingsStore.save(this.settings);
+    this.broadcastFullState();
+  }
+
   /** Pushes settings into the game modules that read them live. */
   protected applySettings(settings: SessionSettings): void {
     this.settings = settings;
     if (settings.giftGoalCoins && settings.giftGoalCoins > 0) {
       this.giftGoal.targetCoins = settings.giftGoalCoins * this.giftGoal.tier;
+    }
+    if (settings.liveTimer?.secondsPerCoin !== undefined) {
+      this.timer.setSecondsPerCoin(settings.liveTimer.secondsPerCoin);
     }
     this.games.TEBAK_KATA.updateSettings(settings);
     if (settings.tekaKata) this.games.TEKA_KATA.updateConfig(settings.tekaKata);

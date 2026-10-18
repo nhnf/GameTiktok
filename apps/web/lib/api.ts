@@ -91,6 +91,8 @@ export const api = {
     request<GameStateHost>("/api/session/switch-game", { method: "POST", token, body: { gameType } }),
   addLiveTime: (token: string, seconds: number) =>
     request<GameStateHost>("/api/session/add-time", { method: "POST", token, body: { seconds } }),
+  setLiveTimerRate: (token: string, secondsPerCoin: number) =>
+    request<GameStateHost>("/api/session/timer-rate", { method: "POST", token, body: { secondsPerCoin } }),
   setGiftGoalTarget: (token: string, targetCoins: number) =>
     request<GameStateHost>("/api/session/gift-goal", { method: "POST", token, body: { targetCoins } }),
   deleteChampion: (token: string, userId: string) =>

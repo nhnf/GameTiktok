@@ -10,7 +10,7 @@ import type {
  */
 export function normalizeMathAnswer(raw: string): number | null {
   if (typeof raw !== "string") return null;
-  const cleaned = raw.trim();
+  const cleaned = raw.trim().replace(/^[−–]\s*/, "-").replace(/^-\s+/, "-");
   if (!/^-?\d+$/.test(cleaned)) return null;
   const parsed = parseInt(cleaned, 10);
   return Number.isSafeInteger(parsed) ? parsed : null;

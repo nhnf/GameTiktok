@@ -35,6 +35,10 @@ export class LiveTimer {
     return this.settings.secondsPerCoin;
   }
 
+  setSecondsPerCoin(seconds: number): void {
+    this.settings.secondsPerCoin = Math.max(0, Math.round(seconds));
+  }
+
   start(settings: LiveTimerSettings | undefined): void {
     this.stop();
     this.settings = {

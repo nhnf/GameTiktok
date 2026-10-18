@@ -111,5 +111,14 @@ export function sessionRouter(manager: GameSessionManager, adapter: LiveAdapter)
     }),
   );
 
+  router.post(
+    "/timer-rate",
+    asyncRoute(async (req, res) => {
+      const secondsPerCoin = numberParam((req.body as { secondsPerCoin?: unknown })?.secondsPerCoin, 0, 0, 3600);
+      manager.setLiveTimerSecondsPerCoin(secondsPerCoin);
+      res.json(manager.getHostState());
+    }),
+  );
+
   return router;
 }

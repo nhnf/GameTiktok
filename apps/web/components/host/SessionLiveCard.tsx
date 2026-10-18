@@ -18,6 +18,7 @@ export function SessionLiveCard({ token, hostState }: { token: string; hostState
   const [confirmEnd, setConfirmEnd] = useState(false);
   const [editGoalCoins, setEditGoalCoins] = useState(hostState.giftGoal?.targetCoins ?? 100);
   const timer = hostState.timer;
+  const [editSecondsPerCoin, setEditSecondsPerCoin] = useState(timer?.secondsPerCoin ?? 30);
   const { remaining, grace } = useLiveCountdown(timer);
   const paused = hostState.status === "PAUSED";
   const overtime = Boolean(timer?.isOvertimeGrace);
@@ -27,6 +28,12 @@ export function SessionLiveCard({ token, hostState }: { token: string; hostState
       setEditGoalCoins(hostState.giftGoal.targetCoins);
     }
   }, [hostState.giftGoal?.targetCoins]);
+
+  useEffect(() => {
+    if (timer?.secondsPerCoin !== undefined) {
+      setEditSecondsPerCoin(timer.secondsPerCoin);
+    }
+  }, [timer?.secondsPerCoin]);
 
   const run = async (label: string, action: () => Promise<unknown>) => {
     setBusy(label);
@@ -67,16 +74,63 @@ export function SessionLiveCard({ token, hostState }: { token: string; hostState
       </div>
 
       {timer && (
-        <div className="mb-3 flex items-center justify-between rounded-nb-sm border-2 border-ink bg-white px-3 py-2">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-wider text-muted">
-              {overtime ? "Waktu habis — tenggang" : paused ? "Sisa waktu (dijeda)" : "Sisa waktu"}
+        <div className="mb-3 rounded-nb-sm border-2 border-ink bg-white p-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-wider text-muted">
+                {overtime ? "Waktu habis — tenggang" : paused ? "Sisa waktu (dijeda)" : "Sisa waktu"}
+              </div>
+              <div className="font-mono text-2xl font-black leading-none">{formatDuration(overtime ? grace : remaining)}</div>
             </div>
-            <div className="font-mono text-2xl font-black leading-none">{formatDuration(overtime ? grace : remaining)}</div>
+            <div className="text-right text-[11px] font-bold">
+              <div className="font-mono text-ink">{coinRuleLabel(timer.secondsPerCoin)}</div>
+              {timer.secondsAddedByGifts > 0 && <div className="text-muted">+{Math.round(timer.secondsAddedByGifts / 60)} menit dari gift</div>}
+            </div>
           </div>
-          <div className="text-right text-[11px] font-bold">
-            <div className="text-muted">{coinRuleLabel(timer.secondsPerCoin)}</div>
-            {timer.secondsAddedByGifts > 0 && <div className="text-ink">+{Math.round(timer.secondsAddedByGifts / 60)} menit dari gift</div>}
+
+          <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t border-ink/10 pt-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[11px] font-bold text-muted">Waktu/koin:</span>
+              <input
+                type="number"
+                min={0}
+                max={3600}
+                value={editSecondsPerCoin}
+                onChange={(e) => setEditSecondsPerCoin(Math.max(0, Number(e.target.value) || 0))}
+                className="nb-input h-7 w-16 px-1 py-0.5 text-center font-mono text-xs font-bold"
+                aria-label="Detik per 1 koin gift"
+              />
+              <span className="text-[11px] font-bold text-muted">dtk</span>
+              <Button
+                size="sm"
+                variant="secondary"
+                disabled={busy !== null || editSecondsPerCoin === timer.secondsPerCoin}
+                onClick={() => void run("setRate", () => api.setLiveTimerRate(token, editSecondsPerCoin))}
+                className="h-7 px-2 text-xs"
+              >
+                Set
+              </Button>
+            </div>
+            <div className="flex items-center gap-1">
+              {[0, 10, 15, 30, 60].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => {
+                    setEditSecondsPerCoin(s);
+                    void run("setRate", () => api.setLiveTimerRate(token, s));
+                  }}
+                  className={`rounded border border-ink px-1.5 py-0.5 text-[10px] font-bold transition-all ${
+                    timer.secondsPerCoin === s
+                      ? "bg-yellow text-ink font-black scale-105"
+                      : "bg-paper text-ink hover:bg-paper-deep"
+                  }`}
+                >
+                  {s === 0 ? "Off" : `${s}s`}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}

@@ -104,5 +104,29 @@ describe("GameSessionManager", () => {
 
     await manager.endSession();
   });
+
+  it("allows setting timer rate (seconds per coin) while live", async () => {
+    const manager = new GameSessionManager(new Broadcaster());
+    await manager.startSession({
+      activeGame: "TEBAK_KATA",
+      liveTimer: { enabled: true, initialMinutes: 10, secondsPerCoin: 10 },
+    });
+
+    expect(manager.getHostState().timer?.secondsPerCoin).toBe(10);
+
+    // 1 coin adds 10s initially
+    await manager.handleGift({ platformUserId: "u1", username: "u1", giftId: "5655", diamondCount: 1, count: 1 });
+    expect(manager.getHostState().timer?.secondsAddedByGifts).toBe(10);
+
+    // Host updates rate live to 60s per coin
+    manager.setLiveTimerSecondsPerCoin(60);
+    expect(manager.getHostState().timer?.secondsPerCoin).toBe(60);
+
+    // Next 1 coin adds 60s
+    await manager.handleGift({ platformUserId: "u2", username: "u2", giftId: "5655", diamondCount: 1, count: 1 });
+    expect(manager.getHostState().timer?.secondsAddedByGifts).toBe(70);
+
+    await manager.endSession();
+  });
 });
 

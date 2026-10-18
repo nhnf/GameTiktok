@@ -44,4 +44,16 @@ describe("LiveTimer (session countdown + overtime)", () => {
     expect(timer.enabled).toBe(false);
     expect(timer.addSeconds(60)).toBe(false);
   });
+
+  it("allows updating secondsPerCoin dynamically", () => {
+    const timer = new LiveTimer({ onOvertime: vi.fn(), onExpired: vi.fn() });
+    timer.start({ enabled: true, initialMinutes: 10, secondsPerCoin: 30 });
+    expect(timer.secondsForCoins(2)).toBe(60);
+
+    timer.setSecondsPerCoin(45);
+    expect(timer.secondsPerCoin).toBe(45);
+    expect(timer.secondsForCoins(2)).toBe(90);
+    expect(timer.view().secondsPerCoin).toBe(45);
+    timer.stop();
+  });
 });
