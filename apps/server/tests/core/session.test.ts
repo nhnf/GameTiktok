@@ -128,5 +128,53 @@ describe("GameSessionManager", () => {
 
     await manager.endSession();
   });
+
+  it("exports sessions and merges champions from another laptop data payload", async () => {
+    const manager = new GameSessionManager(new Broadcaster());
+    await manager.init();
+
+    // Export current data
+    const exported = await manager.exportSessionsForChampions();
+    expect(exported.version).toBe(1);
+    expect(Array.isArray(exported.sessions)).toBe(true);
+
+    // Simulate incoming data from another laptop with a unique ended session
+    const mockLaptopBSession = {
+      id: "laptop_b_session_test_" + Date.now(),
+      status: "ENDED",
+      activeGame: "TEBAK_KATA",
+      settingsJson: "{}",
+      startedAt: new Date(Date.now() - 3600_000).toISOString(),
+      endedAt: new Date(Date.now() - 1800_000).toISOString(),
+      players: [
+        {
+          platformUserId: "champion_b_user",
+          username: "sultan_laptop_b",
+          displayName: "Sultan B",
+          avatarUrl: null,
+          points: 9999,
+          wins: 5,
+          guesses: 10,
+        },
+      ],
+    };
+
+    const mergeResult = await manager.importAndMergeSessions({
+      sessions: [mockLaptopBSession],
+    });
+
+    expect(mergeResult.addedSessions).toBe(1);
+    const champs = manager.getHostState().champions;
+    const champB = champs.find((c) => c.userId === "champion_b_user");
+    expect(champB).toBeDefined();
+    expect(champB?.username).toBe("sultan_laptop_b");
+    expect(champB?.championCount).toBeGreaterThanOrEqual(1);
+
+    // Merging the same session again should skip duplicates
+    const secondMerge = await manager.importAndMergeSessions({
+      sessions: [mockLaptopBSession],
+    });
+    expect(secondMerge.addedSessions).toBe(0);
+  });
 });
 

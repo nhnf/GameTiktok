@@ -1,4 +1,4 @@
-import type { GameStateHost, GameStatePublic, GameType, SessionSettings, SessionSummary } from "@tebak-kata/shared";
+import type { ChampionEntry, GameStateHost, GameStatePublic, GameType, SessionSettings, SessionSummary } from "@tebak-kata/shared";
 import { API_BASE } from "./config";
 
 export class ApiError extends Error {
@@ -97,6 +97,13 @@ export const api = {
     request<GameStateHost>("/api/session/gift-goal", { method: "POST", token, body: { targetCoins } }),
   deleteChampion: (token: string, userId: string) =>
     request<GameStateHost>(`/api/session/champions/${encodeURIComponent(userId)}`, { method: "DELETE", token }),
+  exportChampionsData: (token: string) =>
+    request<{ version: number; exportedAt: string; sessions: unknown[] }>("/api/session/champions/export", { token }),
+  importMergeChampionsData: (token: string, payload: unknown) =>
+    request<GameStateHost & { mergeResult: { addedSessions: number; updatedChampions: ChampionEntry[] } }>(
+      "/api/session/champions/import-merge",
+      { method: "POST", token, body: payload },
+    ),
 
   getSettings: (token: string) => request<SessionSettings>("/api/admin/settings", { token }),
   updateSettings: (token: string, body: Partial<SessionSettings>) =>

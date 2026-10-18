@@ -152,6 +152,115 @@ export abstract class SessionCore {
     }
   }
 
+  async exportSessionsForChampions() {
+    const sessions = await prisma.liveSession.findMany({
+      where: { status: "ENDED" },
+      orderBy: { endedAt: "desc" },
+      include: {
+        players: {
+          select: {
+            platformUserId: true,
+            username: true,
+            displayName: true,
+            avatarUrl: true,
+            points: true,
+            wins: true,
+            guesses: true,
+          },
+        },
+      },
+    });
+
+    return {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        status: s.status,
+        activeGame: s.activeGame,
+        settingsJson: s.settingsJson,
+        startedAt: s.startedAt.toISOString(),
+        endedAt: s.endedAt?.toISOString() ?? null,
+        players: s.players.map((p) => ({
+          platformUserId: p.platformUserId,
+          username: p.username,
+          displayName: p.displayName,
+          avatarUrl: p.avatarUrl,
+          points: p.points,
+          wins: p.wins,
+          guesses: p.guesses,
+        })),
+      })),
+    };
+  }
+
+  async importAndMergeSessions(payload: { sessions?: any[] }): Promise<{ addedSessions: number; updatedChampions: ChampionEntry[] }> {
+    let addedCount = 0;
+    const incomingSessions = Array.isArray(payload?.sessions) ? payload.sessions : [];
+
+    for (const session of incomingSessions) {
+      if (!session.id || !session.startedAt) continue;
+
+      // 1. Skip if session ID already exists in this database
+      const existingById = await prisma.liveSession.findUnique({
+        where: { id: session.id },
+        select: { id: true },
+      });
+      if (existingById) continue;
+
+      const startedAt = new Date(session.startedAt);
+      const endedAt = session.endedAt ? new Date(session.endedAt) : null;
+
+      // 2. Skip if an identical startedAt + endedAt session already exists
+      if (endedAt) {
+        const existingByTime = await prisma.liveSession.findFirst({
+          where: {
+            status: "ENDED",
+            startedAt,
+            endedAt,
+          },
+          select: { id: true },
+        });
+        if (existingByTime) continue;
+      }
+
+      // 3. Create session and associated players
+      const validPlayers = (session.players || []).filter((p: any) => p.platformUserId && p.username);
+
+      await prisma.liveSession.create({
+        data: {
+          id: session.id,
+          status: "ENDED",
+          activeGame: session.activeGame || "TEBAK_KATA",
+          settingsJson: session.settingsJson || "{}",
+          startedAt,
+          endedAt,
+          players: {
+            create: validPlayers.map((p: any) => ({
+              platformUserId: String(p.platformUserId),
+              username: String(p.username),
+              displayName: p.displayName ? String(p.displayName) : null,
+              avatarUrl: p.avatarUrl ? String(p.avatarUrl) : null,
+              points: typeof p.points === "number" ? p.points : 0,
+              wins: typeof p.wins === "number" ? p.wins : 0,
+              guesses: typeof p.guesses === "number" ? p.guesses : 0,
+            })),
+          },
+        },
+      });
+
+      addedCount++;
+    }
+
+    await this.refreshChampions();
+    this.broadcastFullState();
+
+    return {
+      addedSessions: addedCount,
+      updatedChampions: this.champions,
+    };
+  }
+
   // Typed access for the game routers --------------------------------------
   getTebakKataAdapter() {
     return this.games.TEBAK_KATA;

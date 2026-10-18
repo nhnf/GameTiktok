@@ -98,6 +98,27 @@ export function sessionRouter(manager: GameSessionManager, adapter: LiveAdapter)
     }),
   );
 
+  router.get(
+    "/champions/export",
+    asyncRoute(async (_req, res) => {
+      const data = await manager.exportSessionsForChampions();
+      res.json(data);
+    }),
+  );
+
+  router.post(
+    "/champions/import-merge",
+    asyncRoute(async (req, res) => {
+      const body = req.body;
+      if (!body || !Array.isArray(body.sessions)) {
+        res.status(400).json({ error: "Format data tidak valid. File harus berisi data sesi." });
+        return;
+      }
+      const result = await manager.importAndMergeSessions(body);
+      res.json({ ...manager.getHostState(), mergeResult: result });
+    }),
+  );
+
   router.post(
     "/gift-goal",
     asyncRoute(async (req, res) => {
